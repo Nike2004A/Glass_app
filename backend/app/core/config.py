@@ -1,10 +1,17 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
+    """
+    Application settings loaded from environment variables.
+
+    In production (Render), variables come from Environment settings.
+    In development, variables come from .env file.
+    """
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=".env" if os.path.exists(".env") else None,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"
@@ -26,27 +33,24 @@ class Settings(BaseSettings):
     BELVO_SECRET_PASSWORD: str
     BELVO_ENVIRONMENT: str = "sandbox"
 
-    # Redis Configuration
-    REDIS_URL: str = "redis://localhost:6379/0"
+    # Redis Configuration (optional in production)
+    REDIS_URL: Optional[str] = None
     REDIS_PASSWORD: str = ""
 
-    # Celery Configuration
-    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+    # Celery Configuration (optional in production)
+    CELERY_BROKER_URL: Optional[str] = None
+    CELERY_RESULT_BACKEND: Optional[str] = None
 
     # Application Settings
     APP_NAME: str = "Glass Finance API"
     APP_VERSION: str = "1.0.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
     CORS_ORIGINS: str = "http://localhost:19006,http://localhost:8081"
 
-    # Email Configuration
-    SMTP_HOST: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = "noreply@glassfinance.com"
-    SMTP_FROM_NAME: str = "Glass Finance"
+    # Brevo Email Configuration (formerly Sendinblue)
+    BREVO_API_KEY: Optional[str] = None
+    BREVO_FROM_EMAIL: str = "noreply@glassfinance.com"
+    BREVO_FROM_NAME: str = "Glass Finance"
 
     # Background Tasks
     BANK_SYNC_INTERVAL_HOURS: int = 24
@@ -59,4 +63,5 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 
 
+# Initialize settings - will read from environment variables
 settings = Settings()
