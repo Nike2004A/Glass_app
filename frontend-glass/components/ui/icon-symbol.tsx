@@ -29,6 +29,14 @@ const MAPPING = {
   'gearshape.fill': 'settings',
   'bell.fill': 'notifications',
   'plus.circle.fill': 'add-circle',
+  'envelope.fill': 'email',
+  'lock.fill': 'lock',
+  'eye.fill': 'visibility',
+  'eye.slash.fill': 'visibility-off',
+  'person.fill': 'person',
+  'apple.logo': 'apple',
+  'g.circle.fill': 'g-translate',
+  'checkmark': 'check',
 } as IconMapping;
 
 /**

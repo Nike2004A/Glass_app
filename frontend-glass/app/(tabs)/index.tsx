@@ -18,6 +18,7 @@ export default function DashboardScreen() {
   const tint = useThemeColor({}, 'tint');
   const cardBg = useThemeColor({}, 'card');
   const dangerColor = useThemeColor({}, 'danger');
+  const backgroundColor = useThemeColor({}, 'background');
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -144,26 +145,24 @@ export default function DashboardScreen() {
   return (
     <ThemedView style={styles.container}>
       {/* Header with Logo */}
-      <View style={[styles.headerContainer, { backgroundColor: tint }]}>
+      <View style={[styles.headerContainer, { backgroundColor }]}>
         <View style={styles.headerContent}>
           <View style={styles.logoContainer}>
-            <View style={styles.logoWrapper}>
-              <Image
-                source={require('@/assets/images/glass_logo.jpg')}
-                style={styles.logo}
-                resizeMode="cover"
-              />
-            </View>
+            <Image
+              source={require('@/assets/images/glass_sin_fondo2.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <View>
-              <ThemedText style={styles.logoText}>Glass Finance</ThemedText>
-              <ThemedText style={styles.logoSubtext}>Tu secretaria financiera</ThemedText>
+              <ThemedText style={[styles.logoText, { color: tint }]}>Glass Finance</ThemedText>
+              <ThemedText style={[styles.logoSubtext, { color: textSecondary }]}>Tu secretaria financiera</ThemedText>
             </View>
           </View>
           <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => setShowAlertsModal(true)}
           >
-            <IconSymbol name="bell.fill" size={24} color="#FFFFFF" />
+            <IconSymbol name="bell.fill" size={24} color={tint} />
             {summary.pendingAlerts > 0 && (
               <View style={[styles.badge, { backgroundColor: dangerColor }]}>
                 <ThemedText style={styles.badgeText}>
@@ -454,11 +453,8 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e8ed',
   },
   headerContent: {
     flexDirection: 'row',
@@ -470,25 +466,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  logoWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-  },
   logo: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
   },
   logoText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
   },
   logoSubtext: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
   },
   notificationButton: {
     position: 'relative',

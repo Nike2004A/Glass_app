@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View, TouchableOpacity, Switch } from 'react-native';
+import { ScrollView, StyleSheet, View, TouchableOpacity, Switch, Alert } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
@@ -18,6 +18,28 @@ export default function SettingsScreen() {
   const [lowBalanceAlerts, setLowBalanceAlerts] = useState(true);
   const [monthlyReports, setMonthlyReports] = useState(false);
   const [budgetAlerts, setBudgetAlerts] = useState(true);
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro que deseas cerrar sesión?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: Clear any stored user data/tokens here
+            console.log('Logging out...');
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -253,6 +275,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <TouchableOpacity
             style={[styles.dangerButton, { borderColor: useThemeColor({}, 'danger') }]}
+            onPress={handleLogout}
           >
             <ThemedText style={[styles.dangerButtonText, { color: useThemeColor({}, 'danger') }]}>
               Cerrar Sesión
