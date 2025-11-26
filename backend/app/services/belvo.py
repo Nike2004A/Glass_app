@@ -12,12 +12,24 @@ class BelvoService:
     """Service for interacting with Belvo API"""
 
     def __init__(self):
-        """Initialize Belvo client"""
-        self.client = Client(
-            settings.BELVO_SECRET_ID,
-            settings.BELVO_SECRET_PASSWORD,
-            settings.BELVO_ENVIRONMENT
-        )
+        """Initialize Belvo service (client is created lazily)"""
+        self._client = None
+
+    @property
+    def client(self):
+        """Lazy initialization of Belvo client - only connects when first used"""
+        if self._client is None:
+            try:
+                self._client = Client(
+                    settings.BELVO_SECRET_ID,
+                    settings.BELVO_SECRET_PASSWORD,
+                    settings.BELVO_ENVIRONMENT
+                )
+                logger.info(f"Belvo client initialized successfully for environment: {settings.BELVO_ENVIRONMENT}")
+            except Exception as e:
+                logger.error(f"Failed to initialize Belvo client: {str(e)}")
+                raise BelvoAPIException(f"Belvo authentication failed. Please check your credentials.")
+        return self._client
 
     def create_link(
         self,
