@@ -39,10 +39,10 @@ async def startup_event():
     logger.info(f"Debug mode: {settings.DEBUG}")
 
     # Create database tables (in production, use Alembic migrations instead)
-    if settings.DEBUG:
-        logger.info("Creating database tables...")
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables created")
+    # if settings.DEBUG:
+        # logger.info("Creating database tables...")
+        # Base.metadata.create_all(bind=engine)
+        # logger.info("Database tables created")
 
 
 @app.on_event("shutdown")

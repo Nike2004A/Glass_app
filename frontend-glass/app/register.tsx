@@ -7,6 +7,8 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
@@ -14,6 +16,7 @@ import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import authService from "@/services/auth";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -24,6 +27,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const textSecondary = useThemeColor({}, "textSecondary");
   const tint = useThemeColor({}, "tint");
@@ -31,19 +35,78 @@ export default function RegisterScreen() {
   const cardBg = useThemeColor({}, "card");
   const textColor = useThemeColor({}, "text");
 
-  const handleRegister = () => {
-    // TODO: Implement registration logic
+  const handleRegister = async () => {
+    // Validate inputs
+    if (!fullName.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+      Alert.alert("Error", "Por favor completa todos los campos");
+      return;
+    }
+
+    // Validate full name (at least 2 words)
+    if (fullName.trim().split(" ").length < 2) {
+      Alert.alert("Error", "Por favor ingresa tu nombre completo");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Error", "Por favor ingresa un correo válido");
+      return;
+    }
+
+    // Password validation
+    if (password.length < 8) {
+      Alert.alert("Error", "La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
     if (password !== confirmPassword) {
-      alert("Las contraseñas no coinciden");
+      Alert.alert("Error", "Las contraseñas no coinciden");
       return;
     }
+
     if (!acceptedTerms) {
-      alert("Debes aceptar los términos y condiciones");
+      Alert.alert("Error", "Debes aceptar los términos y condiciones");
       return;
     }
-    console.log("Register:", { fullName, email, password });
-    // After successful registration, navigate to main app
-    router.push("/(tabs)");
+
+    setLoading(true);
+
+    try {
+      // Register user
+      await authService.register({
+        full_name: fullName.trim(),
+        email: email.trim(),
+        password,
+      });
+
+      // After successful registration, login automatically
+      await authService.login({
+        email: email.trim(),
+        password,
+      });
+
+      // Navigate to main app
+      Alert.alert(
+        "¡Bienvenido!",
+        "Tu cuenta ha sido creada exitosamente",
+        [
+          {
+            text: "Continuar",
+            onPress: () => router.replace("/(tabs)"),
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      Alert.alert(
+        "Error al registrarse",
+        error.message || "Hubo un problema al crear tu cuenta. Por favor intenta de nuevo."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -220,14 +283,18 @@ export default function RegisterScreen() {
             <TouchableOpacity
               style={[
                 styles.registerButton,
-                { backgroundColor: tint, opacity: acceptedTerms ? 1 : 0.5 },
+                { backgroundColor: tint, opacity: !acceptedTerms || loading ? 0.7 : 1 },
               ]}
               onPress={handleRegister}
-              disabled={!acceptedTerms}
+              disabled={!acceptedTerms || loading}
             >
-              <ThemedText style={styles.registerButtonText}>
-                Crear Cuenta
-              </ThemedText>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <ThemedText style={styles.registerButtonText}>
+                  Crear Cuenta
+                </ThemedText>
+              )}
             </TouchableOpacity>
 
             {/* Divider */}
