@@ -7,7 +7,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { useState } from "react";
@@ -16,6 +15,7 @@ import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { CustomAlert } from "@/components/ui/custom-alert";
 import authService from "@/services/auth";
 
 export default function RegisterScreen() {
@@ -29,45 +29,103 @@ export default function RegisterScreen() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Alert states
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: "",
+    message: "",
+    icon: "checkmark.circle.fill",
+    iconColor: "",
+    isSuccess: false,
+  });
+
   const textSecondary = useThemeColor({}, "textSecondary");
   const tint = useThemeColor({}, "tint");
   const divider = useThemeColor({}, "divider");
   const cardBg = useThemeColor({}, "card");
   const textColor = useThemeColor({}, "text");
+  const danger = useThemeColor({}, "danger");
+  const success = useThemeColor({}, "success");
+
+  const showAlert = (
+    title: string,
+    message: string,
+    icon = "exclamationmark.triangle.fill",
+    iconColor = danger,
+    isSuccess = false
+  ) => {
+    setAlertConfig({ title, message, icon, iconColor, isSuccess });
+    setAlertVisible(true);
+  };
 
   const handleRegister = async () => {
     // Validate inputs
-    if (!fullName.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert("Error", "Por favor completa todos los campos");
+    if (
+      !fullName.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
+      showAlert(
+        "Error",
+        "Por favor completa todos los campos",
+        "exclamationmark.circle.fill",
+        danger
+      );
       return;
     }
 
     // Validate full name (at least 2 words)
     if (fullName.trim().split(" ").length < 2) {
-      Alert.alert("Error", "Por favor ingresa tu nombre completo");
+      showAlert(
+        "Error",
+        "Por favor ingresa tu nombre completo",
+        "person.fill.badge.plus",
+        danger
+      );
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("Error", "Por favor ingresa un correo válido");
+      showAlert(
+        "Error",
+        "Por favor ingresa un correo válido",
+        "envelope.badge.fill",
+        danger
+      );
       return;
     }
 
     // Password validation
     if (password.length < 8) {
-      Alert.alert("Error", "La contraseña debe tener al menos 8 caracteres");
+      showAlert(
+        "Error",
+        "La contraseña debe tener al menos 8 caracteres",
+        "lock.fill",
+        danger
+      );
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Las contraseñas no coinciden");
+      showAlert(
+        "Error",
+        "Las contraseñas no coinciden",
+        "xmark.circle.fill",
+        danger
+      );
       return;
     }
 
     if (!acceptedTerms) {
-      Alert.alert("Error", "Debes aceptar los términos y condiciones");
+      showAlert(
+        "Error",
+        "Debes aceptar los términos y condiciones",
+        "doc.text.fill",
+        danger
+      );
       return;
     }
 
@@ -87,22 +145,22 @@ export default function RegisterScreen() {
         password,
       });
 
-      // Navigate to main app
-      Alert.alert(
+      // Navigate to main app - Show success alert
+      showAlert(
         "¡Bienvenido!",
         "Tu cuenta ha sido creada exitosamente",
-        [
-          {
-            text: "Continuar",
-            onPress: () => router.replace("/(tabs)"),
-          },
-        ]
+        "checkmark.circle.fill",
+        success,
+        true
       );
     } catch (error: any) {
       console.error("Registration error:", error);
-      Alert.alert(
+      showAlert(
         "Error al registrarse",
-        error.message || "Hubo un problema al crear tu cuenta. Por favor intenta de nuevo."
+        error.message ||
+          "Hubo un problema al crear tu cuenta. Por favor intenta de nuevo.",
+        "xmark.circle.fill",
+        danger
       );
     } finally {
       setLoading(false);
@@ -149,7 +207,12 @@ export default function RegisterScreen() {
               <ThemedText style={[styles.label, { color: textSecondary }]}>
                 Nombre completo
               </ThemedText>
-              <View style={[styles.inputWrapper, { borderColor: divider, backgroundColor: cardBg }]}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  { borderColor: divider, backgroundColor: cardBg },
+                ]}
+              >
                 <IconSymbol
                   name="person.fill"
                   size={20}
@@ -172,7 +235,12 @@ export default function RegisterScreen() {
               <ThemedText style={[styles.label, { color: textSecondary }]}>
                 Correo electrónico
               </ThemedText>
-              <View style={[styles.inputWrapper, { borderColor: divider, backgroundColor: cardBg }]}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  { borderColor: divider, backgroundColor: cardBg },
+                ]}
+              >
                 <IconSymbol
                   name="envelope.fill"
                   size={20}
@@ -196,7 +264,12 @@ export default function RegisterScreen() {
               <ThemedText style={[styles.label, { color: textSecondary }]}>
                 Contraseña
               </ThemedText>
-              <View style={[styles.inputWrapper, { borderColor: divider, backgroundColor: cardBg }]}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  { borderColor: divider, backgroundColor: cardBg },
+                ]}
+              >
                 <IconSymbol name="lock.fill" size={20} color={textSecondary} />
                 <TextInput
                   style={[styles.input, { color: textColor }]}
@@ -225,7 +298,12 @@ export default function RegisterScreen() {
               <ThemedText style={[styles.label, { color: textSecondary }]}>
                 Confirmar contraseña
               </ThemedText>
-              <View style={[styles.inputWrapper, { borderColor: divider, backgroundColor: cardBg }]}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  { borderColor: divider, backgroundColor: cardBg },
+                ]}
+              >
                 <IconSymbol name="lock.fill" size={20} color={textSecondary} />
                 <TextInput
                   style={[styles.input, { color: textColor }]}
@@ -283,7 +361,10 @@ export default function RegisterScreen() {
             <TouchableOpacity
               style={[
                 styles.registerButton,
-                { backgroundColor: tint, opacity: !acceptedTerms || loading ? 0.7 : 1 },
+                {
+                  backgroundColor: tint,
+                  opacity: !acceptedTerms || loading ? 0.7 : 1,
+                },
               ]}
               onPress={handleRegister}
               disabled={!acceptedTerms || loading}
@@ -314,7 +395,10 @@ export default function RegisterScreen() {
 
             {/* Social Login Buttons */}
             <TouchableOpacity
-              style={[styles.socialButton, { borderColor: divider, backgroundColor: cardBg }]}
+              style={[
+                styles.socialButton,
+                { borderColor: divider, backgroundColor: cardBg },
+              ]}
             >
               <IconSymbol name="apple.logo" size={20} color={textColor} />
               <ThemedText style={styles.socialButtonText}>
@@ -323,7 +407,10 @@ export default function RegisterScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.socialButton, { borderColor: divider, backgroundColor: cardBg }]}
+              style={[
+                styles.socialButton,
+                { borderColor: divider, backgroundColor: cardBg },
+              ]}
             >
               <IconSymbol name="g.circle.fill" size={20} color={tint} />
               <ThemedText style={styles.socialButtonText}>
@@ -345,6 +432,28 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        icon={alertConfig.icon}
+        iconColor={alertConfig.iconColor}
+        buttons={[
+          {
+            text: alertConfig.isSuccess ? "Continuar" : "OK",
+            style: "default",
+            onPress: () => {
+              setAlertVisible(false);
+              if (alertConfig.isSuccess) {
+                router.replace("./login");
+              }
+            },
+          },
+        ]}
+        onDismiss={() => setAlertVisible(false)}
+      />
     </ThemedView>
   );
 }

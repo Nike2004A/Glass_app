@@ -72,7 +72,6 @@ class AuthService {
   async logout(): Promise<void> {
     try {
       await SecureStore.deleteItemAsync("access_token");
-      await SecureStore.deleteItemAsync("refresh_token");
     } catch (error) {
       console.error("Error clearing tokens:", error);
     }

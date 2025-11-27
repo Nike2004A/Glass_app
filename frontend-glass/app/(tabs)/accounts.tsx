@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View, TouchableOpacity, Modal, Alert } from 'react-native';
+import { ScrollView, StyleSheet, View, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useState } from 'react';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
@@ -7,89 +7,32 @@ import { CreditCardView } from '@/components/financial/credit-card-view';
 import { Card } from '@/components/ui/card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { BankAccount, CreditCard } from '@/types/financial';
+import { GlassLoader } from '@/components/ui/glass-loader';
+import { BelvoConnectModal } from '@/components/belvo/belvo-connect-modal';
+import { useAccountsData } from '@/hooks/use-accounts-data';
+import { CreditCard } from '@/types/financial';
 
 export default function AccountsScreen() {
   const [activeTab, setActiveTab] = useState<'accounts' | 'cards'>('accounts');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [mainAccountId, setMainAccountId] = useState('1');
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const { accounts, loading, error, refreshing, refresh, setPrimaryAccount } = useAccountsData();
+
   const textSecondary = useThemeColor({}, 'textSecondary');
   const tint = useThemeColor({}, 'tint');
-  const cardBg = useThemeColor({}, 'card');
+  const dangerColor = useThemeColor({}, 'danger');
 
-  // Mock data
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
-    {
-      id: '1',
-      name: 'Cuenta Principal',
-      bank: 'BBVA',
-      type: 'checking',
-      balance: 78430.50,
-      currency: 'MXN',
-      lastSync: new Date(Date.now() - 1000 * 60 * 15),
-      accountNumber: '1234567890',
-      status: 'active',
-    },
-    {
-      id: '2',
-      name: 'Cuenta de Ahorros',
-      bank: 'Santander',
-      type: 'savings',
-      balance: 45000,
-      currency: 'MXN',
-      lastSync: new Date(Date.now() - 1000 * 60 * 30),
-      accountNumber: '9876543210',
-      status: 'active',
-    },
-    {
-      id: '3',
-      name: 'Inversión GBM',
-      bank: 'GBM+',
-      type: 'investment',
-      balance: 120500,
-      currency: 'MXN',
-      lastSync: new Date(Date.now() - 1000 * 60 * 60 * 2),
-      accountNumber: '5555666677',
-      status: 'active',
-    },
-  ]);
-
-  const creditCards: CreditCard[] = [
-    {
-      id: '1',
-      name: 'BBVA Azul',
-      bank: 'BBVA',
-      last4: '4532',
-      balance: 12500,
-      limit: 50000,
-      dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15),
-      minPayment: 625,
-      currency: 'MXN',
-      interestRate: 42,
-      autoPayEnabled: true,
-      status: 'active',
-    },
-    {
-      id: '2',
-      name: 'Santander Free',
-      bank: 'Santander',
-      last4: '8901',
-      balance: 8200,
-      limit: 30000,
-      dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 8),
-      minPayment: 410,
-      currency: 'MXN',
-      interestRate: 38,
-      autoPayEnabled: false,
-      status: 'active',
-    },
-  ];
+  // Calculate totals
+  const bankAccounts = accounts;
+  const creditCards: CreditCard[] = []; // TODO: Implement credit cards from backend
 
   const totalBalance = bankAccounts.reduce((sum, acc) => sum + acc.balance, 0);
   const totalCreditUsed = creditCards.reduce((sum, card) => sum + card.balance, 0);
   const totalCreditLimit = creditCards.reduce((sum, card) => sum + card.limit, 0);
 
-  const handleSetMainAccount = (accountId: string) => {
+  // Find primary account (first one for now)
+  const mainAccountId = bankAccounts.find(acc => acc.status === 'active')?.id || bankAccounts[0]?.id || '';
+
+  const handleSetMainAccount = async (accountId: string) => {
     const account = bankAccounts.find(acc => acc.id === accountId);
     if (account) {
       Alert.alert(
@@ -102,9 +45,13 @@ export default function AccountsScreen() {
           },
           {
             text: 'Fijar',
-            onPress: () => {
-              setMainAccountId(accountId);
-              console.log('Main account set to:', accountId);
+            onPress: async () => {
+              try {
+                await setPrimaryAccount(accountId);
+                Alert.alert('Éxito', 'Cuenta principal actualizada');
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'No se pudo actualizar la cuenta principal');
+              }
             },
           },
         ]
@@ -112,9 +59,44 @@ export default function AccountsScreen() {
     }
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <GlassLoader message="Cargando cuentas..." />
+        </View>
+      </ThemedView>
+    );
+  }
+
+  // Show error state
+  if (error && bankAccounts.length === 0) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <IconSymbol name="exclamationmark.triangle.fill" size={48} color={dangerColor} />
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: tint }]}
+            onPress={refresh}
+          >
+            <ThemedText style={styles.retryButtonText}>Reintentar</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>
@@ -122,7 +104,7 @@ export default function AccountsScreen() {
           </ThemedText>
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: tint }]}
-            onPress={() => setShowAddModal(true)}
+            onPress={() => setShowConnectModal(true)}
           >
             <IconSymbol name="plus.circle.fill" size={24} color="#fff" />
           </TouchableOpacity>
@@ -195,89 +177,81 @@ export default function AccountsScreen() {
         <View style={styles.listContainer}>
           {activeTab === 'accounts' ? (
             <>
-              {bankAccounts.map((account) => (
-                <View key={account.id} style={styles.accountContainer}>
-                  <AccountCard
-                    account={account}
-                    onPress={() => console.log('Account pressed', account.id)}
-                  />
-                  <View style={styles.accountActions}>
-                    {mainAccountId === account.id ? (
-                      <View style={[styles.mainBadge, { backgroundColor: `${tint}15` }]}>
-                        <IconSymbol name="checkmark.circle.fill" size={16} color={tint} />
-                        <ThemedText style={[styles.mainBadgeText, { color: tint }]}>
-                          Cuenta Principal
-                        </ThemedText>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.setPrimaryButton, { borderColor: tint }]}
-                        onPress={() => handleSetMainAccount(account.id)}
-                      >
-                        <IconSymbol name="checkmark.circle.fill" size={18} color={tint} />
-                        <ThemedText style={[styles.setPrimaryText, { color: tint }]}>
-                          Fijar como principal
-                        </ThemedText>
-                      </TouchableOpacity>
-                    )}
+              {bankAccounts.length === 0 ? (
+                <Card style={styles.emptyCard}>
+                  <IconSymbol name="banknote.fill" size={48} color={textSecondary} />
+                  <ThemedText style={styles.emptyTitle}>No hay cuentas conectadas</ThemedText>
+                  <ThemedText style={[styles.emptyText, { color: textSecondary }]}>
+                    Conecta tu banco para ver tus cuentas
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={[styles.emptyButton, { backgroundColor: tint }]}
+                    onPress={() => setShowConnectModal(true)}
+                  >
+                    <ThemedText style={styles.emptyButtonText}>Conectar Banco</ThemedText>
+                  </TouchableOpacity>
+                </Card>
+              ) : (
+                bankAccounts.map((account) => (
+                  <View key={account.id} style={styles.accountContainer}>
+                    <AccountCard
+                      account={account}
+                      onPress={() => console.log('Account pressed', account.id)}
+                    />
+                    <View style={styles.accountActions}>
+                      {mainAccountId === account.id ? (
+                        <View style={[styles.mainBadge, { backgroundColor: `${tint}15` }]}>
+                          <IconSymbol name="checkmark.circle.fill" size={16} color={tint} />
+                          <ThemedText style={[styles.mainBadgeText, { color: tint }]}>
+                            Cuenta Principal
+                          </ThemedText>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.setPrimaryButton, { borderColor: tint }]}
+                          onPress={() => handleSetMainAccount(account.id)}
+                        >
+                          <IconSymbol name="checkmark.circle.fill" size={18} color={tint} />
+                          <ThemedText style={[styles.setPrimaryText, { color: tint }]}>
+                            Fijar como principal
+                          </ThemedText>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                </View>
-              ))}
+                ))
+              )}
             </>
           ) : (
             <>
-              {creditCards.map((card) => (
-                <CreditCardView
-                  key={card.id}
-                  card={card}
-                  onPress={() => console.log('Card pressed', card.id)}
-                />
-              ))}
+              {creditCards.length === 0 ? (
+                <Card style={styles.emptyCard}>
+                  <IconSymbol name="creditcard.fill" size={48} color={textSecondary} />
+                  <ThemedText style={styles.emptyTitle}>No hay tarjetas conectadas</ThemedText>
+                  <ThemedText style={[styles.emptyText, { color: textSecondary }]}>
+                    Las tarjetas de crédito se sincronizarán automáticamente cuando conectes tu banco
+                  </ThemedText>
+                </Card>
+              ) : (
+                creditCards.map((card) => (
+                  <CreditCardView
+                    key={card.id}
+                    card={card}
+                    onPress={() => console.log('Card pressed', card.id)}
+                  />
+                ))
+              )}
             </>
           )}
         </View>
       </ScrollView>
 
-      {/* Add Account Modal */}
-      <Modal
-        visible={showAddModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowAddModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: cardBg }]}>
-            <View style={styles.modalHeader}>
-              <ThemedText type="subtitle">Agregar Cuenta</ThemedText>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <ThemedText style={{ color: tint, fontSize: 16, fontWeight: '600' }}>
-                  Cancelar
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.bankOptions}>
-              {['BBVA', 'Santander', 'Banorte', 'HSBC', 'Citibanamex'].map((bank) => (
-                <TouchableOpacity
-                  key={bank}
-                  style={[styles.bankOption, { borderColor: useThemeColor({}, 'divider') }]}
-                  onPress={() => {
-                    console.log('Selected bank:', bank);
-                    setShowAddModal(false);
-                  }}
-                >
-                  <ThemedText style={styles.bankName}>{bank}</ThemedText>
-                  <IconSymbol name="chevron.right" size={20} color={textSecondary} />
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <ThemedText style={[styles.modalInfo, { color: textSecondary }]}>
-              Selecciona tu banco para conectar tu cuenta de forma segura usando Open Banking.
-            </ThemedText>
-          </View>
-        </View>
-      </Modal>
+      {/* Belvo Connect Modal */}
+      <BelvoConnectModal
+        visible={showConnectModal}
+        onClose={() => setShowConnectModal(false)}
+        onSuccess={refresh}
+      />
     </ThemedView>
   );
 }
@@ -302,6 +276,33 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 60,
     paddingBottom: 100,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
@@ -391,42 +392,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    minHeight: 400,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  emptyCard: {
+    padding: 40,
     alignItems: 'center',
-    marginBottom: 24,
+    gap: 16,
   },
-  bankOptions: {
-    gap: 12,
-    marginBottom: 24,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
   },
-  bankOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  bankName: {
+  emptyButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  emptyButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  modalInfo: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
   },
 });

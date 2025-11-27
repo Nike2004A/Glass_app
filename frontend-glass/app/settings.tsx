@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View, TouchableOpacity, Switch, Alert } from 'react-native';
+import { ScrollView, StyleSheet, View, TouchableOpacity, Switch } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
@@ -6,6 +6,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { CustomAlert } from '@/components/ui/custom-alert';
+import authService from '@/services/auth';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -18,27 +20,20 @@ export default function SettingsScreen() {
   const [lowBalanceAlerts, setLowBalanceAlerts] = useState(true);
   const [monthlyReports, setMonthlyReports] = useState(false);
   const [budgetAlerts, setBudgetAlerts] = useState(true);
+  const [showLogoutAlert, setShowLogoutAlert] = useState(false);
 
   const handleLogout = () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro que deseas cerrar sesión?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Cerrar Sesión',
-          style: 'destructive',
-          onPress: () => {
-            // TODO: Clear any stored user data/tokens here
-            console.log('Logging out...');
-            router.replace('/login');
-          },
-        },
-      ]
-    );
+    setShowLogoutAlert(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      await authService.logout();
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      router.replace('/login');
+    }
   };
 
   return (
@@ -283,6 +278,28 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Logout Confirmation Alert */}
+      <CustomAlert
+        visible={showLogoutAlert}
+        title="Cerrar Sesión"
+        message="¿Estás seguro que deseas cerrar sesión?"
+        icon="arrow.right.square.fill"
+        iconColor={useThemeColor({}, 'danger')}
+        buttons={[
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+            onPress: () => setShowLogoutAlert(false),
+          },
+          {
+            text: 'Cerrar Sesión',
+            style: 'destructive',
+            onPress: confirmLogout,
+          },
+        ]}
+        onDismiss={() => setShowLogoutAlert(false)}
+      />
     </ThemedView>
   );
 }

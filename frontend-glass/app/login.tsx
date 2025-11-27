@@ -7,7 +7,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { useState, useEffect } from "react";
@@ -17,6 +16,7 @@ import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { CustomAlert } from "@/components/ui/custom-alert";
 import authService from "@/services/auth";
 
 export default function LoginScreen() {
@@ -30,15 +30,35 @@ export default function LoginScreen() {
   const [hasSavedSession, setHasSavedSession] = useState(false);
   const [biometricType, setBiometricType] = useState<string>("biometric");
 
+  // Alert states
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: "",
+    message: "",
+    icon: "exclamationmark.triangle.fill",
+    iconColor: "",
+  });
+
   const textSecondary = useThemeColor({}, "textSecondary");
   const tint = useThemeColor({}, "tint");
   const divider = useThemeColor({}, "divider");
   const cardBg = useThemeColor({}, "card");
   const textColor = useThemeColor({}, "text");
+  const danger = useThemeColor({}, "danger");
 
   useEffect(() => {
     checkBiometricAvailability();
   }, []);
+
+  const showAlert = (
+    title: string,
+    message: string,
+    icon = "exclamationmark.triangle.fill",
+    iconColor = danger
+  ) => {
+    setAlertConfig({ title, message, icon, iconColor });
+    setAlertVisible(true);
+  };
 
   const checkBiometricAvailability = async () => {
     try {
@@ -46,6 +66,7 @@ export default function LoginScreen() {
       const compatible = await LocalAuthentication.hasHardwareAsync();
       if (!compatible) {
         setIsBiometricAvailable(false);
+        console.log(setIsBiometricAvailable);
         return;
       }
 
@@ -53,6 +74,7 @@ export default function LoginScreen() {
       const enrolled = await LocalAuthentication.isEnrolledAsync();
       if (!enrolled) {
         setIsBiometricAvailable(false);
+        console.log(setIsBiometricAvailable);
         return;
       }
 
@@ -61,10 +83,17 @@ export default function LoginScreen() {
       setHasSavedSession(hasSaved);
 
       // Get biometric types available
-      const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-      if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+      const types =
+        await LocalAuthentication.supportedAuthenticationTypesAsync();
+      if (
+        types.includes(
+          LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION
+        )
+      ) {
         setBiometricType("faceid");
-      } else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+      } else if (
+        types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)
+      ) {
         setBiometricType("touchid");
       } else {
         setBiometricType("biometric");
@@ -94,20 +123,28 @@ export default function LoginScreen() {
         router.replace("/(tabs)");
       } else {
         // User cancelled or failed biometric auth
-        if (result.error === "user_cancel" || result.error === "system_cancel") {
+        if (
+          result.error === "user_cancel" ||
+          result.error === "system_cancel"
+        ) {
           // Don't show error for cancellation
           return;
         }
-        Alert.alert(
+        showAlert(
           "Autenticación fallida",
-          "No se pudo verificar tu identidad. Por favor intenta de nuevo."
+          "No se pudo verificar tu identidad. Por favor intenta de nuevo.",
+          "faceid",
+          danger
         );
       }
     } catch (error: any) {
       console.error("Biometric login error:", error);
-      Alert.alert(
+      showAlert(
         "Error",
-        error.message || "No se pudo iniciar sesión con biometría. Por favor usa tu contraseña."
+        error.message ||
+          "No se pudo iniciar sesión con biometría. Por favor usa tu contraseña.",
+        "exclamationmark.triangle.fill",
+        danger
       );
     } finally {
       setBiometricLoading(false);
@@ -117,14 +154,24 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     // Validate inputs
     if (!email.trim() || !password.trim()) {
-      Alert.alert("Error", "Por favor completa todos los campos");
+      showAlert(
+        "Error",
+        "Por favor completa todos los campos",
+        "exclamationmark.circle.fill",
+        danger
+      );
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("Error", "Por favor ingresa un correo válido");
+      showAlert(
+        "Error",
+        "Por favor ingresa un correo válido",
+        "envelope.badge.fill",
+        danger
+      );
       return;
     }
 
@@ -140,9 +187,12 @@ export default function LoginScreen() {
       router.replace("/(tabs)");
     } catch (error: any) {
       console.error("Login error:", error);
-      Alert.alert(
+      showAlert(
         "Error al iniciar sesión",
-        error.message || "Credenciales incorrectas. Por favor intenta de nuevo."
+        error.message ||
+          "Credenciales incorrectas. Por favor intenta de nuevo.",
+        "xmark.circle.fill",
+        danger
       );
     } finally {
       setLoading(false);
@@ -188,7 +238,12 @@ export default function LoginScreen() {
               <ThemedText style={[styles.label, { color: textSecondary }]}>
                 Correo electrónico
               </ThemedText>
-              <View style={[styles.inputWrapper, { borderColor: divider, backgroundColor: cardBg }]}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  { borderColor: divider, backgroundColor: cardBg },
+                ]}
+              >
                 <IconSymbol
                   name="envelope.fill"
                   size={20}
@@ -212,7 +267,12 @@ export default function LoginScreen() {
               <ThemedText style={[styles.label, { color: textSecondary }]}>
                 Contraseña
               </ThemedText>
-              <View style={[styles.inputWrapper, { borderColor: divider, backgroundColor: cardBg }]}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  { borderColor: divider, backgroundColor: cardBg },
+                ]}
+              >
                 <IconSymbol name="lock.fill" size={20} color={textSecondary} />
                 <TextInput
                   style={[styles.input, { color: textColor }]}
@@ -245,7 +305,10 @@ export default function LoginScreen() {
 
             {/* Login Button */}
             <TouchableOpacity
-              style={[styles.loginButton, { backgroundColor: tint, opacity: loading ? 0.7 : 1 }]}
+              style={[
+                styles.loginButton,
+                { backgroundColor: tint, opacity: loading ? 0.7 : 1 },
+              ]}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -287,7 +350,9 @@ export default function LoginScreen() {
                       size={22}
                       color={tint}
                     />
-                    <ThemedText style={[styles.biometricButtonText, { color: tint }]}>
+                    <ThemedText
+                      style={[styles.biometricButtonText, { color: tint }]}
+                    >
                       {biometricType === "faceid"
                         ? "Iniciar con Face ID"
                         : biometricType === "touchid"
@@ -316,7 +381,10 @@ export default function LoginScreen() {
 
             {/* Social Login Buttons */}
             <TouchableOpacity
-              style={[styles.socialButton, { borderColor: divider, backgroundColor: cardBg }]}
+              style={[
+                styles.socialButton,
+                { borderColor: divider, backgroundColor: cardBg },
+              ]}
             >
               <IconSymbol name="apple.logo" size={20} color={textColor} />
               <ThemedText style={styles.socialButtonText}>
@@ -325,7 +393,10 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.socialButton, { borderColor: divider, backgroundColor: cardBg }]}
+              style={[
+                styles.socialButton,
+                { borderColor: divider, backgroundColor: cardBg },
+              ]}
             >
               <IconSymbol name="g.circle.fill" size={20} color={tint} />
               <ThemedText style={styles.socialButtonText}>
@@ -347,6 +418,23 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        icon={alertConfig.icon}
+        iconColor={alertConfig.iconColor}
+        buttons={[
+          {
+            text: "OK",
+            style: "default",
+            onPress: () => setAlertVisible(false),
+          },
+        ]}
+        onDismiss={() => setAlertVisible(false)}
+      />
     </ThemedView>
   );
 }
