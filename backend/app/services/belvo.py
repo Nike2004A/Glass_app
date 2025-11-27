@@ -63,7 +63,9 @@ class BelvoService:
             if token:
                 link_data["token"] = token
 
-            link = self.client.Links.create(**link_data)
+            # Belvo API returns a list, even when creating a single link
+            links = self.client.Links.create(**link_data)
+            link = links[0] if isinstance(links, list) and len(links) > 0 else links
             logger.info(f"Created Belvo link: {link['id']}")
             return link
 

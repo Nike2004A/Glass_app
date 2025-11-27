@@ -8,6 +8,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useState } from 'react';
 import { ThemedView } from '@/components/themed-view';
@@ -45,12 +46,16 @@ export function BelvoConnectModal({
 
   // Lista de bancos compatibles con Belvo en México
   const banks = [
-    { id: 'banorte_mx_retail', name: 'Banorte', icon: 'building.columns.fill' },
-    { id: 'bbva_mx_retail', name: 'BBVA', icon: 'building.columns.fill' },
-    { id: 'santander_mx_retail', name: 'Santander', icon: 'building.columns.fill' },
-    { id: 'hsbc_mx_retail', name: 'HSBC', icon: 'building.columns.fill' },
-    { id: 'banamex_mx_retail', name: 'Citibanamex', icon: 'building.columns.fill' },
-    { id: 'scotiabank_mx_retail', name: 'Scotiabank', icon: 'building.columns.fill' },
+    // Bancos de prueba (Sandbox)
+    { id: 'erebor_mx_retail', name: 'Erebor (Prueba)', logo: require('@/assets/images/glass_sin_fondo2.png'), isTest: true },
+    { id: 'gringotts_mx_retail', name: 'Gringotts (Prueba)', logo: require('@/assets/images/glass_sin_fondo2.png'), isTest: true },
+    // Bancos reales
+    { id: 'banorte_mx_retail', name: 'Banorte', logo: require('@/assets/images/banorte_logo.png') },
+    { id: 'bbva_mx_retail', name: 'BBVA', logo: require('@/assets/images/bbva_logo.png') },
+    { id: 'santander_mx_retail', name: 'Santander', logo: require('@/assets/images/santander_logo.jpeg') },
+    { id: 'hsbc_mx_retail', name: 'HSBC', logo: require('@/assets/images/hsbc_logo.png') },
+    { id: 'banamex_mx_retail', name: 'Citibanamex', logo: require('@/assets/images/banamex_logo.png') },
+    { id: 'scotiabank_mx_retail', name: 'Scotiabank', logo: require('@/assets/images/scotiabank_logo.png') },
   ];
 
   const handleBankSelect = (bankId: string, bankName: string) => {
@@ -168,15 +173,21 @@ export function BelvoConnectModal({
                       onPress={() => handleBankSelect(bank.id, bank.name)}
                     >
                       <View style={styles.bankInfo}>
-                        <View
-                          style={[
-                            styles.bankIconContainer,
-                            { backgroundColor: `${tint}15` },
-                          ]}
-                        >
-                          <IconSymbol name={bank.icon} size={24} color={tint} />
+                        <View style={styles.bankLogoContainer}>
+                          <Image
+                            source={bank.logo}
+                            style={styles.bankLogo}
+                            resizeMode="contain"
+                          />
                         </View>
-                        <ThemedText style={styles.bankName}>{bank.name}</ThemedText>
+                        <View style={styles.bankTextContainer}>
+                          <ThemedText style={styles.bankName}>{bank.name}</ThemedText>
+                          {bank.isTest && (
+                            <ThemedText style={[styles.testBadge, { color: tint }]}>
+                              Sandbox
+                            </ThemedText>
+                          )}
+                        </View>
                       </View>
                       <IconSymbol name="chevron.right" size={20} color={textSecondary} />
                     </TouchableOpacity>
@@ -311,16 +322,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
-  bankIconContainer: {
+  bankLogoContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  bankLogo: {
+    width: 40,
+    height: 40,
+  },
+  bankTextContainer: {
+    flex: 1,
+    gap: 4,
   },
   bankName: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  testBadge: {
+    fontSize: 11,
     fontWeight: '600',
   },
   infoCard: {
